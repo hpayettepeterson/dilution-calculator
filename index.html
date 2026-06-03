@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spinout dilution &amp; protection calculator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #FAFAF7;
+    --bg2: #F0EFEA;
+    --bg3: #E6E5DF;
+    --tx: #1B1B18;
+    --tx2: #6B6A64;
+    --tx3: #8E8D87;
+    --brd: rgba(0,0,0,0.10);
+    --blue: #2568B5;
+    --coral: #C64B22;
+    --teal: #0D7358;
+    --red-bg: #FEF2EE;
+    --green-bg: #EEF6F2;
+    --r: 8px;
+    --serif: 'Source Serif 4', Georgia, serif;
+    --sans: 'IBM Plex Sans', -apple-system, sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161614;
+      --bg2: #222220;
+      --bg3: #2E2E2B;
+      --tx: #EEEDEA;
+      --tx2: #A3A29C;
+      --tx3: #7A796F;
+      --brd: rgba(255,255,255,0.10);
+      --red-bg: #2A1A14;
+      --green-bg: #142A1E;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: var(--sans);
+    color: var(--tx);
+    background: var(--bg);
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 4rem;
+    line-height: 1.65;
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-bottom: 6px;
+  }
+  .subtitle {
+    color: var(--tx2);
+    font-size: 14px;
+    margin-bottom: 1rem;
+    line-height: 1.5;
+  }
+  .subtitle a { color: var(--blue); text-decoration: none; }
+  .subtitle a:hover { text-decoration: underline; }
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--tx3);
+    margin-bottom: 12px;
+  }
+
+  /* Inputs */
+  .input-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    margin-bottom: 1.5rem;
+  }
+  .input-block label {
+    display: block;
+    font-size: 12px;
+    color: var(--tx2);
+    margin-bottom: 5px;
+    font-weight: 500;
+  }
+  .input-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: var(--bg2);
+    border: 1px solid var(--brd);
+    border-radius: var(--r);
+    overflow: hidden;
+  }
+  .input-row input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 9px 12px;
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--tx);
+    outline: none;
+    min-width: 0;
+  }
+  .input-row .unit {
+    padding: 9px 12px 9px 0;
+    font-size: 13px;
+    color: var(--tx3);
+    font-family: var(--mono);
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  /* Toggles */
+  .toggle-row {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .toggle-group {
+    display: flex;
+    background: var(--bg2);
+    border: 1px solid var(--brd);
+    border-radius: var(--r);
+    overflow: hidden;
+  }
+  .toggle-group button {
+    padding: 7px 16px;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    border: none;
+    background: transparent;
+    color: var(--tx2);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .toggle-group button.active {
+    background: var(--tx);
+    color: var(--bg);
+  }
+  .fx-inline {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--tx3);
+  }
+  .fx-inline input {
+    width: 56px;
+    background: var(--bg2);
+    border: 1px solid var(--brd);
+    border-radius: 6px;
+    padding: 5px 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--tx);
+    outline: none;
+  }
+
+  /* Cap mode selector */
+  .cap-mode-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .cap-mode-btn {
+    padding: 6px 14px;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid var(--brd);
+    background: var(--bg2);
+    color: var(--tx2);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .cap-mode-btn.active {
+    background: var(--tx);
+    color: var(--bg);
+    border-color: var(--tx);
+  }
+  .cap-mode-btn:hover:not(.active) { border-color: var(--tx3); }
+  .cap-input-row { margin-bottom: 1.5rem; }
+  .cap-note {
+    font-size: 11px;
+    color: var(--tx3);
+    margin-top: 5px;
+    line-height: 1.5;
+  }
+  .input-row select {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 9px 12px;
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--tx);
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+  }
+
+  /* Buttons */
+  .btn {
+    padding: 7px 14px;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid var(--brd);
+    background: var(--bg2);
+    color: var(--tx);
+    border-radius: var(--r);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn:hover { border-color: var(--tx3); }
+  .btn-primary { background: var(--tx); color: var(--bg); border-color: var(--tx); }
+  .btn-primary:hover { opacity: 0.88; }
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+
+  /* Editable rounds table */
+  .ref-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-bottom: 1rem;
+  }
+  .ref-table th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--tx3);
+    padding: 8px 8px;
+    border-bottom: 2px solid var(--brd);
+  }
+  .ref-table th.num, .ref-table td.num { text-align: right; }
+  .ref-table td {
+    padding: 5px 8px;
+    border-bottom: 1px solid var(--brd);
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+  .ref-table td.computed { color: var(--tx2); }
+  .ref-table td.protected-cell { color: var(--teal); font-weight: 500; }
+  .ref-table td.diluted-cell { color: var(--tx2); }
+  .ref-table td.stake { font-weight: 500; color: var(--tx); }
+  .ref-table tr.total-row td {
+    border-top: 2px solid var(--brd);
+    border-bottom: none;
+    font-weight: 600;
+  }
+  .cell-input {
+    width: 100%;
+    border: 1px solid transparent;
+    background: var(--bg2);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--tx);
+    outline: none;
+  }
+  .cell-input.name {
+    font-family: var(--sans);
+    font-weight: 500;
+    text-align: left;
+  }
+  .cell-input.num { text-align: right; }
+  .cell-input:focus { border-color: var(--blue); background: var(--bg); }
+  .row-remove {
+    border: none;
+    background: transparent;
+    color: var(--tx3);
+    font-size: 17px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 5px;
+  }
+  .row-remove:hover { color: var(--coral); background: var(--red-bg); }
+
+  /* Result cards */
+  .results-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 1.5rem;
+  }
+  .result-card { padding: 16px 18px; border-radius: var(--r); border: 1px solid var(--brd); }
+  .result-card .label {
+    font-size: 11px;
+    color: var(--tx3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+  .result-card .value { font-family: var(--mono); font-size: 22px; font-weight: 500; margin-bottom: 2px; }
+  .result-card .detail { font-size: 12px; color: var(--tx2); }
+  .card-coral { background: var(--red-bg); }
+  .card-teal { background: var(--green-bg); }
+
+  .comparison-box {
+    background: var(--bg2);
+    border-radius: var(--r);
+    padding: 18px 20px;
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--brd);
+  }
+  .comparison-box .comp-label {
+    font-size: 11px;
+    color: var(--tx3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .comparison-box .comp-value { font-family: var(--serif); font-size: 28px; font-weight: 600; margin-bottom: 4px; }
+  .comparison-box .comp-detail { font-size: 13px; color: var(--tx2); line-height: 1.5; }
+
+  /* Scenarios */
+  .scn-bar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+  .scn-bar input.scn-name {
+    background: var(--bg2);
+    border: 1px solid var(--brd);
+    border-radius: var(--r);
+    padding: 8px 12px;
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--tx);
+    outline: none;
+    min-width: 180px;
+  }
+  .scn-bar input.scn-name:focus { border-color: var(--blue); }
+  .scn-empty { font-size: 13px; color: var(--tx3); font-style: italic; margin-bottom: 1rem; }
+  .scn-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 1.5rem; }
+  .scn-table th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--tx3);
+    padding: 8px 8px;
+    border-bottom: 2px solid var(--brd);
+  }
+  .scn-table th.num, .scn-table td.num { text-align: right; }
+  .scn-table td {
+    padding: 9px 8px;
+    border-bottom: 1px solid var(--brd);
+    font-family: var(--mono);
+    font-size: 13px;
+    vertical-align: middle;
+  }
+  .scn-table td.name { font-family: var(--sans); font-weight: 500; }
+  .scn-table tr.current-row td { background: var(--bg2); }
+  .scn-table .pill {
+    font-family: var(--sans);
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: var(--bg3);
+    color: var(--tx2);
+    white-space: nowrap;
+  }
+  .scn-actions { display: flex; gap: 4px; justify-content: flex-end; }
+  .scn-mini {
+    border: none;
+    background: transparent;
+    color: var(--tx3);
+    font-family: var(--sans);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 3px 7px;
+    border-radius: 5px;
+  }
+  .scn-mini:hover { color: var(--tx); background: var(--bg3); }
+  .scn-mini.del:hover { color: var(--coral); background: var(--red-bg); }
+
+  /* Chart */
+  .chart-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .chart-toggle { display: flex; background: var(--bg2); border: 1px solid var(--brd); border-radius: var(--r); overflow: hidden; }
+  .chart-toggle button {
+    padding: 6px 12px;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 500;
+    border: none;
+    background: transparent;
+    color: var(--tx2);
+    cursor: pointer;
+  }
+  .chart-toggle button.active { background: var(--tx); color: var(--bg); }
+  .chart-wrap { position: relative; height: 320px; margin-bottom: 1.5rem; }
+
+  details {
+    background: var(--bg2);
+    border-radius: var(--r);
+    border: 1px solid var(--brd);
+    margin-bottom: 1rem;
+    font-size: 13px;
+  }
+  details summary { padding: 12px 16px; cursor: pointer; font-weight: 500; color: var(--tx); font-size: 13px; }
+  details .inner { padding: 0 16px 14px; color: var(--tx2); line-height: 1.6; }
+  details .inner a { color: var(--blue); text-decoration: none; word-break: break-all; }
+  details .inner a:hover { text-decoration: underline; }
+  .src-round { margin-bottom: 10px; }
+  .src-round strong { color: var(--tx); font-weight: 500; }
+
+  .divider { height: 1px; background: var(--brd); margin: 2rem 0; }
+  .footer { font-size: 12px; color: var(--tx3); margin-top: 2.5rem; line-height: 1.6; }
+  .footer a { color: var(--blue); text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+
+  @media (max-width: 640px) {
+    .results-grid { grid-template-columns: 1fr; }
+    body { padding: 1.5rem 1rem 3rem; }
+    .ref-table { font-size: 12px; }
+    .ref-table td, .ref-table th { padding: 4px 5px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Spinout dilution &amp; protection calculator</h1>
+<p class="subtitle">
+  Edit the funding rounds, set an anti-dilution protection mode, and see how a university's equity stake survives to exit.
+  Save scenarios to compare side by side. Companion to the <a href="https://hpayettepeterson.github.io/equity-calculator/">equity equivalence calculator</a>.
+</p>
+
+<!-- Currency + FX -->
+<div class="toggle-row">
+  <span class="section-label" style="margin-bottom:0">Currency</span>
+  <div class="toggle-group" id="curr-toggle">
+    <button class="active" data-cur="eur">€ EUR</button>
+    <button data-cur="usd">$ USD</button>
+  </div>
+  <span class="fx-inline" id="fx-wrap">€1 = $<input type="number" id="fx-rate" value="1.10" min="0.5" max="2" step="0.01"></span>
+</div>
+
+<!-- Top inputs -->
+<div class="input-group">
+  <div class="input-block">
+    <label>University stake at incorporation</label>
+    <div class="input-row">
+      <input type="number" id="uni-stake" value="15" min="0" max="100" step="0.5">
+      <span class="unit">%</span>
+    </div>
+  </div>
+  <div class="input-block">
+    <label>Exit valuation</label>
+    <div class="input-row">
+      <input type="number" id="exit-val" value="500" min="0" step="10">
+      <span class="unit" id="exit-unit">€M</span>
+    </div>
+  </div>
+</div>
+
+<!-- Protection mode -->
+<div class="section-label">Anti-dilution protection</div>
+<div class="cap-mode-selector">
+  <button class="cap-mode-btn active" data-mode="none">No protection</button>
+  <button class="cap-mode-btn" data-mode="postmoney">Post-money cap</button>
+  <button class="cap-mode-btn" data-mode="cumulative">Cumulative raised cap</button>
+  <button class="cap-mode-btn" data-mode="through">Through round</button>
+</div>
+<div class="cap-input-row" id="cap-input-area" style="display:none;"></div>
+
+<div class="divider"></div>
+
+<!-- Editable rounds -->
+<div class="section-label">Funding rounds — edit any value</div>
+<div style="overflow-x:auto;">
+<table class="ref-table" id="main-table">
+  <thead>
+    <tr>
+      <th>Round</th>
+      <th class="num">Pre-money</th>
+      <th class="num">Raised</th>
+      <th class="num">Post-money</th>
+      <th class="num">Dilution</th>
+      <th class="num">Status</th>
+      <th class="num">Stake after</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody id="table-body"></tbody>
+</table>
+</div>
+<div class="toolbar">
+  <button class="btn" id="add-round">+ Add round</button>
+  <button class="btn" id="reset-ref">Reset to reference case</button>
+</div>
+
+<!-- Result cards -->
+<div class="results-grid">
+  <div class="result-card card-coral">
+    <div class="label">Final stake after last round</div>
+    <div class="value" id="final-stake">—</div>
+    <div class="detail" id="final-detail">—</div>
+  </div>
+  <div class="result-card card-teal">
+    <div class="label">Value at <span id="exit-label">€500M</span> exit</div>
+    <div class="value" id="exit-value">—</div>
+    <div class="detail" id="exit-detail">—</div>
+  </div>
+</div>
+
+<div class="comparison-box">
+  <div class="comp-label">Equivalent fully-dilutable stake</div>
+  <div class="comp-value" id="equiv-stake">—</div>
+  <div class="comp-detail" id="equiv-detail">—</div>
+</div>
+
+<div class="comparison-box">
+  <div class="comp-label">Same stake without protection</div>
+  <div class="comp-value" id="unprotected-stake">—</div>
+  <div class="comp-detail" id="unprotected-detail">—</div>
+</div>
+
+<div class="divider"></div>
+
+<!-- Scenarios -->
+<div class="section-label">Saved scenarios — compare side by side</div>
+<div class="scn-bar">
+  <input type="text" class="scn-name" id="scn-name" placeholder="Name this scenario…">
+  <button class="btn btn-primary" id="scn-save">Save current scenario</button>
+</div>
+<div id="scn-empty" class="scn-empty">No scenarios saved yet. Set up a case above and save it, then change the inputs and save another to compare.</div>
+<div style="overflow-x:auto;">
+<table class="scn-table" id="scn-table" style="display:none;">
+  <thead>
+    <tr>
+      <th>Scenario</th>
+      <th class="num">Start %</th>
+      <th>Protection</th>
+      <th class="num">Final %</th>
+      <th class="num">Equiv. dilutable</th>
+      <th class="num">Value @ exit</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody id="scn-body"></tbody>
+</table>
+</div>
+
+<div class="chart-head" id="chart-head" style="display:none;">
+  <span class="section-label" style="margin-bottom:0">Comparison</span>
+  <div class="chart-toggle" id="chart-toggle">
+    <button class="active" data-metric="finalPct">Final stake %</button>
+    <button data-metric="exitValue">Value at exit</button>
+  </div>
+</div>
+<div class="chart-wrap" id="chart-wrap" style="display:none;">
+  <canvas id="scn-chart"></canvas>
+</div>
+
+<div class="divider"></div>
+
+<!-- Sources -->
+<details>
+  <summary>Reference case &amp; data sources</summary>
+  <div class="inner">
+    <p style="margin-bottom:10px">The default rounds are a European deep-tech / life-science spinout path through Series D, from PitchBook, Carta, Atomico and SVB Healthcare 2024–2025 medians. Every value is editable — "Reset to reference case" restores these defaults.</p>
+    <div class="src-round"><strong>Pre-seed</strong> — €4M pre, €0.5M round &nbsp;·&nbsp; <strong>Seed</strong> — €8M pre, €2M round &nbsp;·&nbsp; <strong>Series A</strong> — €30M pre, €10M round</div>
+    <div class="src-round"><strong>Series B</strong> — €75M pre, €20M round &nbsp;·&nbsp; <strong>Series C</strong> — €160M pre, €40M round &nbsp;·&nbsp; <strong>Series D</strong> — €350M pre, €55M round</div>
+    <div class="src-round" style="margin-top:10px">
+      <a href="https://carta.com/data/state-of-private-markets-q1-2025/">Carta State of Private Markets Q1 2025</a><br>
+      <a href="https://media.orrick.com/Media%20Library/files/pitchbook-ls-snapshot-q3-2025-v2.pdf">Orrick × PitchBook Life Sciences Snapshot Q3 2025</a><br>
+      <a href="https://www.stateofeuropeantech.com/">Atomico State of European Tech 2025</a><br>
+      <a href="https://www.svb.com/globalassets/trendsandinsights/reports/healthcare/2025/hcie-h1-2025-full-report.pdf">SVB Healthcare H1 2025</a>
+    </div>
+  </div>
+</details>
+
+<details>
+  <summary>How the protection modes work</summary>
+  <div class="inner">
+    <p style="margin-bottom:8px"><strong>Post-money cap:</strong> the stake is shielded from dilution in any round whose post-money valuation does not exceed the cap. The first round whose post-money exceeds the cap, and every round after, dilutes normally.</p>
+    <p style="margin-bottom:8px"><strong>Cumulative raised cap:</strong> protection holds while total equity raised (after the round closes) stays at or below the cap. The first round that pushes cumulative raised above the cap is the first to dilute.</p>
+    <p style="margin-bottom:8px"><strong>Through round:</strong> the stake is protected up to and including the selected round; all later rounds dilute normally.</p>
+    <p><strong>Equivalent fully-dilutable stake:</strong> the starting % of an ordinary, fully-dilutable stake that would land on the same final % after all rounds. It is how much ordinary equity the protection is "worth" at incorporation.</p>
+  </div>
+</details>
+
+<div class="footer">
+  Calculations run entirely in your browser; edits and saved scenarios persist locally on this device only.
+  Companion to the <a href="https://hpayettepeterson.github.io/equity-calculator/">equity equivalence calculator</a>.
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+  'use strict';
+
+  // ---- Reference case (EUR millions) ----
+  var REFERENCE = {
+    uniStake: 15,
+    exit: 500,
+    capMode: 'none',
+    capValue: 10,      // EUR M (post-money / cumulative cap)
+    throughIndex: 1,   // default: through Seed
+    rounds: [
+      { name: 'Pre-seed', pre: 4.0,   size: 0.5  },
+      { name: 'Seed',     pre: 8.0,   size: 2.0  },
+      { name: 'Series A', pre: 30.0,  size: 10.0 },
+      { name: 'Series B', pre: 75.0,  size: 20.0 },
+      { name: 'Series C', pre: 160.0, size: 40.0 },
+      { name: 'Series D', pre: 350.0, size: 55.0 }
+    ]
+  };
+
+  var LS_STATE = 'dilcalc_state_v1';
+  var LS_SCN = 'dilcalc_scenarios_v1';
+  var LS_FX = 'dilcalc_fx_v1';
+  var LS_CUR = 'dilcalc_currency_v1';
+
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+  // ---- Persistent globals ----
+  var currency = load(LS_CUR) || 'eur';
+  var FX = load(LS_FX) || 1.10;
+  var state = load(LS_STATE) || clone(REFERENCE);
+  var scenarios = load(LS_SCN) || [];
+  var chartMetric = 'finalPct';
+  var chart = null;
+
+  function load(key) {
+    try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : null; }
+    catch (e) { return null; }
+  }
+  function save(key, val) {
+    try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
+  }
+  function persist() {
+    save(LS_STATE, state); save(LS_SCN, scenarios);
+    save(LS_FX, FX); save(LS_CUR, currency);
+  }
+
+  // ---- Currency / formatting ----
+  function fx(eur) { return currency === 'usd' ? eur * FX : eur; }
+  function toEur(disp) { return currency === 'usd' ? disp / FX : disp; }
+  function sym() { return currency === 'usd' ? '$' : '€'; }
+  function fmtM(eurVal) {
+    var v = fx(eurVal);
+    var neg = v < 0 ? '-' : '';
+    v = Math.abs(v);
+    if (v >= 1000) return neg + sym() + (v / 1000).toFixed(2) + 'B';
+    if (v >= 100)  return neg + sym() + v.toFixed(0) + 'M';
+    if (v >= 10)   return neg + sym() + v.toFixed(1) + 'M';
+    return neg + sym() + v.toFixed(2) + 'M';
+  }
+  function fmtPct(v) { return v.toFixed(2) + '%'; }
+  function num(v, fallback) { var n = parseFloat(v); return isFinite(n) ? n : (fallback || 0); }
+
+  // ---- Core model (operates on a state object) ----
+  function derive(st) {
+    var rounds = st.rounds.map(function(r) {
+      var pre = num(r.pre), size = num(r.size);
+      var post = pre + size;
+      var dilution = post > 0 ? size / post : 0;
+      return { name: r.name, pre: pre, size: size, post: post, dilution: dilution, retain: 1 - dilution };
+    });
+    var cumul = [], c = 0;
+    for (var i = 0; i < rounds.length; i++) { c += rounds[i].size; cumul[i] = c; }
+    return { rounds: rounds, cumul: cumul };
+  }
+
+  function isProtected(st, d, i) {
+    if (st.capMode === 'none') return false;
+    if (st.capMode === 'postmoney') return d.rounds[i].post <= num(st.capValue);
+    if (st.capMode === 'cumulative') return d.cumul[i] <= num(st.capValue);
+    if (st.capMode === 'through') return i <= st.throughIndex;
+    return false;
+  }
+
+  // Returns { steps:[{protected, stakeAfter}], finalPct }
+  function simulate(st, d) {
+    var stake = num(st.uniStake) / 100;
+    var steps = [];
+    for (var i = 0; i < d.rounds.length; i++) {
+      var prot = isProtected(st, d, i);
+      if (!prot) stake *= d.rounds[i].retain;
+      steps.push({ protected: prot, stakeAfter: stake * 100 });
+    }
+    return { steps: steps, finalPct: stake * 100 };
+  }
+
+  function productRetain(d) {
+    var p = 1;
+    for (var i = 0; i < d.rounds.length; i++) p *= d.rounds[i].retain;
+    return p;
+  }
+  function finalNoProt(st, d) { return num(st.uniStake) * productRetain(d); }
+  function equivDilutable(finalPct, d) {
+    var p = productRetain(d);
+    return p > 0 ? finalPct / p : finalPct;
+  }
+
+  // One-call summary used for cards and scenario rows
+  function summarize(st) {
+    var d = derive(st);
+    var sim = simulate(st, d);
+    var unprot = finalNoProt(st, d);
+    return {
+      d: d,
+      sim: sim,
+      startPct: num(st.uniStake),
+      finalPct: sim.finalPct,
+      unprotPct: unprot,
+      equivPct: equivDilutable(sim.finalPct, d),
+      protected: st.capMode !== 'none'
+    };
+  }
+
+  function modeLabel(st) {
+    if (st.capMode === 'none') return 'None';
+    if (st.capMode === 'postmoney') return 'Post-money ≤ ' + fmtM(num(st.capValue));
+    if (st.capMode === 'cumulative') return 'Cumul. raised ≤ ' + fmtM(num(st.capValue));
+    if (st.capMode === 'through') {
+      var nm = (st.rounds[st.throughIndex] || {}).name || ('round ' + (st.throughIndex + 1));
+      return 'Through ' + nm;
+    }
+    return '—';
+  }
+
+  // ================= RENDER =================
+
+  // Build the editable rounds table (structure changes only).
+  function buildTable() {
+    var tbody = document.getElementById('table-body');
+    tbody.innerHTML = '';
+    state.rounds.forEach(function(r, i) {
+      var tr = document.createElement('tr');
+      tr.setAttribute('data-i', i);
+      tr.innerHTML =
+        '<td><input class="cell-input name" type="text" value="' + escapeAttr(r.name) + '" data-f="name"></td>' +
+        '<td class="num"><input class="cell-input num" type="number" min="0" step="1" value="' + round2(fx(num(r.pre))) + '" data-f="pre"></td>' +
+        '<td class="num"><input class="cell-input num" type="number" min="0" step="0.5" value="' + round2(fx(num(r.size))) + '" data-f="size"></td>' +
+        '<td class="num computed post"></td>' +
+        '<td class="num computed dil"></td>' +
+        '<td class="num status"></td>' +
+        '<td class="num stake"></td>' +
+        '<td class="num"><button class="row-remove" title="Remove round">×</button></td>';
+      tbody.appendChild(tr);
+
+      tr.querySelectorAll('.cell-input').forEach(function(inp) {
+        inp.addEventListener('input', function() {
+          var f = this.getAttribute('f') || this.getAttribute('data-f');
+          if (f === 'name') {
+            state.rounds[i].name = this.value;
+            syncThroughOptions();
+          } else {
+            state.rounds[i][f] = toEur(num(this.value));
+          }
+          recompute();
+          persist();
+        });
+      });
+      tr.querySelector('.row-remove').addEventListener('click', function() {
+        state.rounds.splice(i, 1);
+        if (state.throughIndex >= state.rounds.length) state.throughIndex = Math.max(0, state.rounds.length - 1);
+        buildTable(); buildCapInput(); recompute(); persist();
+      });
+    });
+
+    // total row
+    var tr = document.createElement('tr');
+    tr.className = 'total-row';
+    tr.innerHTML =
+      '<td>Total</td><td class="num"></td><td class="num total-raised"></td>' +
+      '<td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td><td></td>';
+    tbody.appendChild(tr);
+  }
+
+  function escapeAttr(s) { return String(s).replace(/"/g, '&quot;'); }
+  function round2(v) { return Math.round(v * 100) / 100; }
+
+  // Recompute all derived cells + cards + scenarios + chart (no input rebuild).
+  function recompute() {
+    var s = summarize(state);
+    var d = s.d, sim = s.sim;
+    var tbody = document.getElementById('table-body');
+
+    d.rounds.forEach(function(r, i) {
+      var tr = tbody.querySelector('tr[data-i="' + i + '"]');
+      if (!tr) return;
+      var prot = sim.steps[i].protected;
+      tr.querySelector('.post').textContent = fmtM(r.post);
+      tr.querySelector('.dil').textContent = (r.dilution * 100).toFixed(1) + '%';
+      var st = tr.querySelector('.status');
+      st.textContent = prot ? 'Protected' : 'Diluted';
+      st.className = 'num status ' + (prot ? 'protected-cell' : 'diluted-cell');
+      tr.querySelector('.stake').textContent = fmtPct(sim.steps[i].stakeAfter);
+    });
+    var totalRaised = d.cumul.length ? d.cumul[d.cumul.length - 1] : 0;
+    var tr = tbody.querySelector('.total-raised');
+    if (tr) tr.textContent = fmtM(totalRaised);
+
+    // cards
+    var startPct = s.startPct, finalStake = s.finalPct;
+    var exitEur = num(state.exit);
+    document.getElementById('final-stake').textContent = fmtPct(finalStake);
+    var dilFromStart = startPct > 0 ? (1 - finalStake / startPct) * 100 : 0;
+    document.getElementById('final-detail').textContent =
+      'Down from ' + fmtPct(startPct) + ' (' + dilFromStart.toFixed(1) + '% total dilution)';
+
+    document.getElementById('exit-label').textContent = fmtM(exitEur);
+    var exitWorth = finalStake / 100 * exitEur;
+    document.getElementById('exit-value').textContent = fmtM(exitWorth);
+    document.getElementById('exit-detail').textContent = fmtPct(finalStake) + ' of ' + fmtM(exitEur);
+
+    // equivalent fully-dilutable
+    if (!s.protected) {
+      document.getElementById('equiv-stake').textContent = fmtPct(startPct);
+      document.getElementById('equiv-detail').textContent =
+        'No protection selected — the stake is already fully dilutable.';
+    } else {
+      document.getElementById('equiv-stake').textContent = fmtPct(s.equivPct);
+      var ratio = startPct > 0 ? (s.equivPct / startPct) : 0;
+      document.getElementById('equiv-detail').textContent =
+        'A fully-dilutable ' + fmtPct(s.equivPct) + ' stake at incorporation would land on the same ' +
+        fmtPct(finalStake) + ' after the last round — ' + ratio.toFixed(2) + '× the protected ' +
+        fmtPct(startPct) + ' stake.';
+    }
+
+    // same stake without protection
+    var unprot = s.unprotPct;
+    document.getElementById('unprotected-stake').textContent = fmtPct(unprot);
+    if (!s.protected) {
+      document.getElementById('unprotected-detail').textContent =
+        'No protection selected — this is the current result.';
+    } else {
+      var gainPp = finalStake - unprot;
+      var gainRel = unprot > 0 ? (gainPp / unprot * 100) : 0;
+      var gainVal = gainPp / 100 * exitEur;
+      document.getElementById('unprotected-detail').textContent =
+        'Without protection the same ' + fmtPct(startPct) + ' start ends at ' + fmtPct(unprot) +
+        '. Protection adds ' + fmtPct(gainPp) + ' (' + gainRel.toFixed(0) + '% more), worth ' +
+        fmtM(gainVal) + ' at the ' + fmtM(exitEur) + ' exit.';
+    }
+
+    renderScenarios();
+  }
+
+  // Cap input area (rebuilds on mode change / structure change / currency toggle)
+  function buildCapInput() {
+    var area = document.getElementById('cap-input-area');
+    var mode = state.capMode;
+    if (mode === 'none') { area.style.display = 'none'; area.innerHTML = ''; return; }
+    area.style.display = 'block';
+
+    if (mode === 'postmoney' || mode === 'cumulative') {
+      var d = derive(state);
+      var refList = (mode === 'postmoney')
+        ? d.rounds.map(function(r) { return fmtM(r.post); }).join(', ')
+        : d.cumul.map(function(v) { return fmtM(v); }).join(', ');
+      var labelTxt = mode === 'postmoney' ? 'Post-money valuation cap' : 'Cumulative equity raised cap';
+      var noteTxt = mode === 'postmoney'
+        ? 'Protection applies to rounds whose post-money ≤ this value. Post-money by round: ' + refList + '.'
+        : 'Protection applies while cumulative raised (after each round) ≤ this value. Cumulative by round: ' + refList + '.';
+      area.innerHTML =
+        '<div class="input-block">' +
+        '  <label>' + labelTxt + '</label>' +
+        '  <div class="input-row" style="max-width:280px">' +
+        '    <input type="number" id="cap-val" value="' + round2(fx(num(state.capValue))) + '" min="0" step="1">' +
+        '    <span class="unit">' + sym() + 'M</span>' +
+        '  </div>' +
+        '  <div class="cap-note">' + noteTxt + '</div>' +
+        '</div>';
+      document.getElementById('cap-val').addEventListener('input', function() {
+        state.capValue = toEur(num(this.value)); recompute(); persist();
+      });
+    } else if (mode === 'through') {
+      var opts = state.rounds.map(function(r, i) {
+        return '<option value="' + i + '"' + (state.throughIndex === i ? ' selected' : '') + '>' +
+               escapeAttr(r.name) + '</option>';
+      }).join('');
+      area.innerHTML =
+        '<div class="input-block">' +
+        '  <label>Protected through (and including)</label>' +
+        '  <div class="input-row" style="max-width:280px"><select id="through-select">' + opts + '</select></div>' +
+        '  <div class="cap-note">The stake is protected through the selected round; all later rounds dilute normally.</div>' +
+        '</div>';
+      document.getElementById('through-select').addEventListener('change', function() {
+        state.throughIndex = parseInt(this.value, 10); recompute(); persist();
+      });
+    }
+  }
+
+  function syncThroughOptions() {
+    var sel = document.getElementById('through-select');
+    if (!sel) return;
+    var opts = sel.querySelectorAll('option');
+    for (var i = 0; i < opts.length; i++) {
+      if (state.rounds[i]) opts[i].textContent = state.rounds[i].name;
+    }
+  }
+
+  // ================= SCENARIOS =================
+  function renderScenarios() {
+    var body = document.getElementById('scn-body');
+    var table = document.getElementById('scn-table');
+    var empty = document.getElementById('scn-empty');
+    var head = document.getElementById('chart-head');
+    var wrap = document.getElementById('chart-wrap');
+    body.innerHTML = '';
+
+    var exitEur = num(state.exit);
+
+    function rowHtml(label, st, isCurrent, idx) {
+      var s = summarize(st);
+      var exitWorth = s.finalPct / 100 * exitEur;
+      var equivTxt = s.protected ? fmtPct(s.equivPct) : '—';
+      var actions = isCurrent ? ''
+        : '<div class="scn-actions">' +
+            '<button class="scn-mini load" data-i="' + idx + '">Load</button>' +
+            '<button class="scn-mini del" data-i="' + idx + '">Delete</button>' +
+          '</div>';
+      return '<td class="name">' + escapeAttr(label) + (isCurrent ? ' <span class="pill">current</span>' : '') + '</td>' +
+        '<td class="num">' + fmtPct(s.startPct) + '</td>' +
+        '<td><span class="pill">' + modeLabel(st) + '</span></td>' +
+        '<td class="num">' + fmtPct(s.finalPct) + '</td>' +
+        '<td class="num">' + equivTxt + '</td>' +
+        '<td class="num">' + fmtM(exitWorth) + '</td>' +
+        '<td class="num">' + actions + '</td>';
+    }
+
+    // current row first
+    var cur = document.createElement('tr');
+    cur.className = 'current-row';
+    cur.innerHTML = rowHtml('Current setup', state, true, -1);
+    body.appendChild(cur);
+
+    scenarios.forEach(function(scn, i) {
+      var tr = document.createElement('tr');
+      tr.innerHTML = rowHtml(scn.name, scn.st, false, i);
+      body.appendChild(tr);
+    });
+
+    body.querySelectorAll('.scn-mini.load').forEach(function(b) {
+      b.addEventListener('click', function() {
+        var i = parseInt(this.getAttribute('data-i'), 10);
+        state = clone(scenarios[i].st);
+        buildTable(); buildCapInput(); syncCapModeButtons(); syncTopInputs(); recompute(); persist();
+      });
+    });
+    body.querySelectorAll('.scn-mini.del').forEach(function(b) {
+      b.addEventListener('click', function() {
+        var i = parseInt(this.getAttribute('data-i'), 10);
+        scenarios.splice(i, 1); renderScenarios(); persist();
+      });
+    });
+
+    var has = scenarios.length > 0;
+    table.style.display = has ? '' : 'none';
+    empty.style.display = has ? 'none' : '';
+    head.style.display = has ? '' : 'none';
+    wrap.style.display = has ? '' : 'none';
+    if (has) renderChart();
+    else if (chart) { chart.destroy(); chart = null; }
+  }
+
+  function renderChart() {
+    var exitEur = num(state.exit);
+    var labels = ['Current'].concat(scenarios.map(function(s) { return s.name; }));
+    var states = [state].concat(scenarios.map(function(s) { return s.st; }));
+    var data = states.map(function(st) {
+      var s = summarize(st);
+      return chartMetric === 'finalPct' ? s.finalPct : (s.finalPct / 100 * exitEur);
+    });
+
+    var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var grid = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
+    var tickCol = dark ? '#A3A29C' : '#6B6A64';
+    var colors = ['#2568B5', '#C64B22', '#0D7358', '#9A6BD4', '#C9A227', '#1B8FA3', '#B5446E'];
+    var bg = labels.map(function(_, i) { return colors[i % colors.length]; });
+
+    var isPct = chartMetric === 'finalPct';
+    var yTitle = isPct ? 'Final stake (%)' : 'Value at ' + fmtM(exitEur) + ' exit';
+
+    if (chart) chart.destroy();
+    var ctx = document.getElementById('scn-chart').getContext('2d');
+    chart = new Chart(ctx, {
+      type: 'bar',
+      data: { labels: labels, datasets: [{ data: data, backgroundColor: bg, borderRadius: 5, maxBarThickness: 64 }] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(item) {
+                return isPct ? item.parsed.y.toFixed(2) + '%' : fmtM(item.parsed.y);
+              }
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: tickCol, font: { size: 12 } } },
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: yTitle, color: tickCol, font: { size: 12 } },
+            grid: { color: grid },
+            ticks: {
+              color: tickCol,
+              callback: function(v) { return isPct ? v.toFixed(1) + '%' : fmtM(v); }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // ================= UI WIRING =================
+  function syncCapModeButtons() {
+    document.querySelectorAll('.cap-mode-btn').forEach(function(b) {
+      b.classList.toggle('active', b.dataset.mode === state.capMode);
+    });
+  }
+  function syncTopInputs() {
+    document.getElementById('uni-stake').value = state.uniStake;
+    document.getElementById('exit-val').value = round2(fx(num(state.exit)));
+    document.getElementById('exit-unit').textContent = sym() + 'M';
+  }
+  function syncCurrencyUI() {
+    document.querySelectorAll('#curr-toggle button').forEach(function(b) {
+      b.classList.toggle('active', b.dataset.cur === currency);
+    });
+    document.getElementById('fx-wrap').style.display = currency === 'usd' ? 'flex' : 'flex';
+    document.getElementById('fx-rate').value = FX;
+    document.getElementById('exit-unit').textContent = sym() + 'M';
+  }
+
+  // currency toggle
+  document.getElementById('curr-toggle').addEventListener('click', function(e) {
+    var btn = e.target.closest('button'); if (!btn) return;
+    currency = btn.dataset.cur;
+    syncCurrencyUI();
+    buildTable(); buildCapInput(); syncTopInputs(); recompute(); persist();
+  });
+  document.getElementById('fx-rate').addEventListener('input', function() {
+    FX = num(this.value, 1.10);
+    if (currency === 'usd') { buildTable(); buildCapInput(); syncTopInputs(); }
+    recompute(); persist();
+  });
+
+  // cap mode buttons
+  document.querySelectorAll('.cap-mode-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      state.capMode = this.dataset.mode;
+      if (state.capMode === 'postmoney' && !state.capValue) state.capValue = 10;
+      if (state.capMode === 'cumulative' && !state.capValue) state.capValue = 10;
+      syncCapModeButtons(); buildCapInput(); recompute(); persist();
+    });
+  });
+
+  // top inputs
+  document.getElementById('uni-stake').addEventListener('input', function() {
+    state.uniStake = num(this.value); recompute(); persist();
+  });
+  document.getElementById('exit-val').addEventListener('input', function() {
+    state.exit = toEur(num(this.value)); recompute(); persist();
+  });
+
+  // add / reset
+  document.getElementById('add-round').addEventListener('click', function() {
+    var last = state.rounds[state.rounds.length - 1];
+    var pre = last ? round2(last.pre + last.size) * 2 : 4;
+    state.rounds.push({ name: 'Series ' + nextSeriesLetter(), pre: pre, size: pre * 0.2 });
+    buildTable(); buildCapInput(); recompute(); persist();
+  });
+  document.getElementById('reset-ref').addEventListener('click', function() {
+    state = clone(REFERENCE);
+    syncCapModeButtons(); syncTopInputs(); buildTable(); buildCapInput(); recompute(); persist();
+  });
+  function nextSeriesLetter() {
+    var letters = 'ABCDEFGHIJ';
+    var count = state.rounds.filter(function(r) { return /^Series /.test(r.name); }).length;
+    return letters[count] || 'X';
+  }
+
+  // scenario save
+  document.getElementById('scn-save').addEventListener('click', function() {
+    var inp = document.getElementById('scn-name');
+    var name = (inp.value || '').trim() || ('Scenario ' + (scenarios.length + 1));
+    scenarios.push({ name: name, st: clone(state) });
+    inp.value = '';
+    renderScenarios(); persist();
+  });
+  document.getElementById('scn-name').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') document.getElementById('scn-save').click();
+  });
+
+  // chart metric toggle
+  document.getElementById('chart-toggle').addEventListener('click', function(e) {
+    var btn = e.target.closest('button'); if (!btn) return;
+    chartMetric = btn.dataset.metric;
+    this.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    renderChart();
+  });
+
+  // ---- init ----
+  syncCurrencyUI();
+  syncCapModeButtons();
+  syncTopInputs();
+  buildTable();
+  buildCapInput();
+  recompute();
+})();
+</script>
+
+</body>
+</html>
