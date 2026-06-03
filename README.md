@@ -15,14 +15,15 @@ Companion to the [equity equivalence calculator](https://hpayettepeterson.github
   - *Cumulative raised cap* — protected while total equity raised ≤ the cap.
   - *Through round* — protected up to and including a chosen round.
 - **Equivalence** — the headline number: the starting % of an ordinary, fully-dilutable stake that lands on the same final % after all rounds. This is what the protection is "worth" at incorporation.
-- **Save & compare scenarios** — snapshot any setup, name it, and compare final stake, equivalent dilutable stake, and value at exit side by side, with a chart.
+- **Save & compare scenarios** — snapshot any setup, name it, and compare final stake, equivalent dilutable stake, and value at exit side by side in a table.
+- **Live charts** — equity-ownership trajectories across the rounds (protected vs unprotected, plus every saved scenario), a protected-vs-dilution-equivalent view with the "worth N pp of founding equity" read-out, and a final-stake bar comparison. All update as you type.
 - **EUR / USD toggle** with an editable FX rate.
 
 Everything runs in the browser. Edits and saved scenarios persist in `localStorage` on your device only — nothing is uploaded.
 
 ## Reference case
 
-The default rounds are a European deep-tech / life-science spinout path through Series D, based on PitchBook, Carta, Atomico, and SVB Healthcare 2024–2025 medians. "Reset to reference case" restores them. Sources are listed in-app.
+The default rounds are a European deep-tech / life-science spinout path through Series D, based on PitchBook, Carta, Atomico, and SVB Healthcare 2024–2025 medians. Every value is editable; "Reset to reference case" restores these defaults.
 
 ## Run locally
 
@@ -34,4 +35,4 @@ npx serve .
 
 ## Stack
 
-Plain HTML / CSS / vanilla JS. [Chart.js](https://www.chartjs.org/) (CDN) for the comparison chart. No build step.
+Plain HTML / CSS / vanilla JS. [Chart.js](https://www.chartjs.org/) (CDN) for the charts. No build step.

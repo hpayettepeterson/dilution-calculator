@@ -424,6 +424,20 @@
   }
   .chart-toggle button.active { background: var(--tx); color: var(--bg); }
   .chart-wrap { position: relative; height: 320px; margin-bottom: 1.5rem; }
+  .chart-caption {
+    background: var(--green-bg);
+    border: 1px solid rgba(13,115,88,0.30);
+    color: var(--teal);
+    border-radius: var(--r);
+    padding: 12px 16px;
+    font-size: 13px;
+    line-height: 1.55;
+    margin-bottom: 1.5rem;
+  }
+  .chart-caption.muted { background: var(--bg2); border-color: var(--brd); color: var(--tx2); }
+  @media (prefers-color-scheme: dark) {
+    .chart-caption { color: #4FBF98; border-color: rgba(79,191,152,0.30); }
+  }
 
   details {
     background: var(--bg2);
@@ -577,11 +591,7 @@
 </div>
 
 <div class="chart-head" id="chart-head" style="display:none;">
-  <span class="section-label" style="margin-bottom:0">Comparison</span>
-  <div class="chart-toggle" id="chart-toggle">
-    <button class="active" data-metric="finalPct">Final stake %</button>
-    <button data-metric="exitValue">Value at exit</button>
-  </div>
+  <span class="section-label" style="margin-bottom:0">Final stake by scenario</span>
 </div>
 <div class="chart-wrap" id="chart-wrap" style="display:none;">
   <canvas id="scn-chart"></canvas>
@@ -589,21 +599,14 @@
 
 <div class="divider"></div>
 
-<!-- Sources -->
-<details>
-  <summary>Reference case &amp; data sources</summary>
-  <div class="inner">
-    <p style="margin-bottom:10px">The default rounds are a European deep-tech / life-science spinout path through Series D, from PitchBook, Carta, Atomico and SVB Healthcare 2024–2025 medians. Every value is editable — "Reset to reference case" restores these defaults.</p>
-    <div class="src-round"><strong>Pre-seed</strong> — €4M pre, €0.5M round &nbsp;·&nbsp; <strong>Seed</strong> — €8M pre, €2M round &nbsp;·&nbsp; <strong>Series A</strong> — €30M pre, €10M round</div>
-    <div class="src-round"><strong>Series B</strong> — €75M pre, €20M round &nbsp;·&nbsp; <strong>Series C</strong> — €160M pre, €40M round &nbsp;·&nbsp; <strong>Series D</strong> — €350M pre, €55M round</div>
-    <div class="src-round" style="margin-top:10px">
-      <a href="https://carta.com/data/state-of-private-markets-q1-2025/">Carta State of Private Markets Q1 2025</a><br>
-      <a href="https://media.orrick.com/Media%20Library/files/pitchbook-ls-snapshot-q3-2025-v2.pdf">Orrick × PitchBook Life Sciences Snapshot Q3 2025</a><br>
-      <a href="https://www.stateofeuropeantech.com/">Atomico State of European Tech 2025</a><br>
-      <a href="https://www.svb.com/globalassets/trendsandinsights/reports/healthcare/2025/hcie-h1-2025-full-report.pdf">SVB Healthcare H1 2025</a>
-    </div>
-  </div>
-</details>
+<div class="section-label">Equity ownership through funding rounds</div>
+<div class="chart-wrap"><canvas id="chart-traj"></canvas></div>
+
+<div class="section-label" style="margin-top:1.75rem;">Dilution-equivalent unprotected stake</div>
+<div class="chart-wrap" style="margin-bottom:0.75rem;"><canvas id="chart-equiv"></canvas></div>
+<div id="equiv-caption" class="chart-caption"></div>
+
+<div class="divider"></div>
 
 <details>
   <summary>How the protection modes work</summary>
@@ -654,8 +657,9 @@
   var FX = load(LS_FX) || 1.10;
   var state = load(LS_STATE) || clone(REFERENCE);
   var scenarios = load(LS_SCN) || [];
-  var chartMetric = 'finalPct';
-  var chart = null;
+  var chart = null;      // scenario bar chart (final stake %)
+  var chartA = null;     // ownership trajectories (Figure 1)
+  var chartB = null;     // dilution-equivalent (Figure 2)
 
   function load(key) {
     try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : null; }
@@ -991,58 +995,130 @@
     wrap.style.display = has ? '' : 'none';
     if (has) renderChart();
     else if (chart) { chart.destroy(); chart = null; }
+    renderLineCharts();
   }
 
+  // ---- chart helpers ----
+  function chartTheme() {
+    var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return {
+      grid: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)',
+      tick: dark ? '#A3A29C' : '#6B6A64'
+    };
+  }
+  var SCN_COLORS = ['#0D7358', '#9A6BD4', '#C9A227', '#1B8FA3', '#B5446E', '#5B8C2A'];
+
+  function roundLabels() {
+    return ['Founding'].concat(state.rounds.map(function(r) { return r.name; }));
+  }
+  function trajProtected(st) {
+    var d = derive(st), sim = simulate(st, d);
+    return [num(st.uniStake)].concat(sim.steps.map(function(s) { return s.stakeAfter; }));
+  }
+  function trajUnprot(st) {
+    var d = derive(st), a = [num(st.uniStake)], s = num(st.uniStake);
+    for (var i = 0; i < d.rounds.length; i++) { s *= d.rounds[i].retain; a.push(s); }
+    return a;
+  }
+  function trajEquiv(st) {
+    var d = derive(st), sim = simulate(st, d), eq = equivDilutable(sim.finalPct, d), a = [eq], s = eq;
+    for (var i = 0; i < d.rounds.length; i++) { s *= d.rounds[i].retain; a.push(s); }
+    return a;
+  }
+  function lineDS(label, data, color, dashed) {
+    return {
+      label: label, data: data, borderColor: color, backgroundColor: color,
+      borderWidth: 2.5, borderDash: dashed ? [7, 5] : [], pointRadius: 3,
+      pointHoverRadius: 5, tension: 0.12, fill: false
+    };
+  }
+  function lineOpts(t) {
+    return {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: true, position: 'top', labels: { color: t.tick, usePointStyle: true, boxWidth: 8, font: { size: 12 } } },
+        tooltip: { callbacks: { label: function(it) { return it.dataset.label + ': ' + it.parsed.y.toFixed(2) + '%'; } } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: t.tick, font: { size: 12 } } },
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: 'Equity ownership (%)', color: t.tick, font: { size: 12 } },
+          grid: { color: t.grid },
+          ticks: { color: t.tick, callback: function(v) { return v.toFixed(0) + '%'; } }
+        }
+      }
+    };
+  }
+
+  // Scenario bar chart — final stake % per scenario (shown when scenarios exist)
   function renderChart() {
-    var exitEur = num(state.exit);
+    var t = chartTheme();
     var labels = ['Current'].concat(scenarios.map(function(s) { return s.name; }));
     var states = [state].concat(scenarios.map(function(s) { return s.st; }));
-    var data = states.map(function(st) {
-      var s = summarize(st);
-      return chartMetric === 'finalPct' ? s.finalPct : (s.finalPct / 100 * exitEur);
-    });
-
-    var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    var grid = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
-    var tickCol = dark ? '#A3A29C' : '#6B6A64';
-    var colors = ['#2568B5', '#C64B22', '#0D7358', '#9A6BD4', '#C9A227', '#1B8FA3', '#B5446E'];
-    var bg = labels.map(function(_, i) { return colors[i % colors.length]; });
-
-    var isPct = chartMetric === 'finalPct';
-    var yTitle = isPct ? 'Final stake (%)' : 'Value at ' + fmtM(exitEur) + ' exit';
+    var data = states.map(function(st) { return summarize(st).finalPct; });
+    var palette = ['#2568B5'].concat(SCN_COLORS);
+    var bg = labels.map(function(_, i) { return palette[i % palette.length]; });
 
     if (chart) chart.destroy();
-    var ctx = document.getElementById('scn-chart').getContext('2d');
-    chart = new Chart(ctx, {
+    chart = new Chart(document.getElementById('scn-chart').getContext('2d'), {
       type: 'bar',
       data: { labels: labels, datasets: [{ data: data, backgroundColor: bg, borderRadius: 5, maxBarThickness: 64 }] },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
+        responsive: true, maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: function(item) {
-                return isPct ? item.parsed.y.toFixed(2) + '%' : fmtM(item.parsed.y);
-              }
-            }
-          }
+          tooltip: { callbacks: { label: function(item) { return item.parsed.y.toFixed(2) + '%'; } } }
         },
         scales: {
-          x: { grid: { display: false }, ticks: { color: tickCol, font: { size: 12 } } },
+          x: { grid: { display: false }, ticks: { color: t.tick, font: { size: 12 } } },
           y: {
             beginAtZero: true,
-            title: { display: true, text: yTitle, color: tickCol, font: { size: 12 } },
-            grid: { color: grid },
-            ticks: {
-              color: tickCol,
-              callback: function(v) { return isPct ? v.toFixed(1) + '%' : fmtM(v); }
-            }
+            title: { display: true, text: 'Final stake (%)', color: t.tick, font: { size: 12 } },
+            grid: { color: t.grid },
+            ticks: { color: t.tick, callback: function(v) { return v.toFixed(1) + '%'; } }
           }
         }
       }
     });
+  }
+
+  // Live line charts: ownership trajectories (Fig 1) + dilution-equivalent (Fig 2)
+  function renderLineCharts() {
+    var t = chartTheme(), labels = roundLabels(), s = summarize(state);
+
+    // Figure 1 — trajectories: current protected (+ unprotected counterfactual) + each scenario
+    var dsA = [ lineDS('Current — protected', trajProtected(state), '#2568B5', false) ];
+    if (s.protected) dsA.push(lineDS('Current — no protection', trajUnprot(state), '#C64B22', true));
+    scenarios.forEach(function(scn, i) {
+      dsA.push(lineDS(scn.name, trajProtected(scn.st).slice(0, labels.length), SCN_COLORS[i % SCN_COLORS.length], false));
+    });
+    if (chartA) chartA.destroy();
+    chartA = new Chart(document.getElementById('chart-traj').getContext('2d'), {
+      type: 'line', data: { labels: labels, datasets: dsA }, options: lineOpts(t)
+    });
+
+    // Figure 2 — protected vs dilution-equivalent unprotected (converging)
+    var dsB = [ lineDS('Protected (' + fmtPct(s.startPct) + ')', trajProtected(state), '#2568B5', false) ];
+    if (s.protected) dsB.push(lineDS('Equivalent unprotected (' + fmtPct(s.equivPct) + ')', trajEquiv(state), '#0D7358', true));
+    if (chartB) chartB.destroy();
+    chartB = new Chart(document.getElementById('chart-equiv').getContext('2d'), {
+      type: 'line', data: { labels: labels, datasets: dsB }, options: lineOpts(t)
+    });
+
+    var cap = document.getElementById('equiv-caption');
+    if (s.protected) {
+      var pp = s.equivPct - s.startPct;
+      cap.className = 'chart-caption';
+      cap.textContent = 'Anti-dilution protection on the ' + fmtPct(s.startPct) + ' stake is worth about +' +
+        pp.toFixed(2) + ' pp of founding equity — it lands on the same final ' + fmtPct(s.finalPct) +
+        ' as a fully-dilutable ' + fmtPct(s.equivPct) + ' stake — the dashed line is exactly that equivalent, ending on the same final stake.';
+    } else {
+      cap.className = 'chart-caption muted';
+      cap.textContent = 'No protection selected — the equivalent unprotected stake equals the nominal ' +
+        fmtPct(s.startPct) + ' stake. Choose a protection mode above to see the gap.';
+    }
   }
 
   // ================= UI WIRING =================
@@ -1082,8 +1158,8 @@
   document.querySelectorAll('.cap-mode-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
       state.capMode = this.dataset.mode;
-      if (state.capMode === 'postmoney' && !state.capValue) state.capValue = 10;
-      if (state.capMode === 'cumulative' && !state.capValue) state.capValue = 10;
+      if (state.capMode === 'postmoney') state.capValue = 10;
+      if (state.capMode === 'cumulative') state.capValue = 2;
       syncCapModeButtons(); buildCapInput(); recompute(); persist();
     });
   });
@@ -1123,15 +1199,6 @@
   });
   document.getElementById('scn-name').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') document.getElementById('scn-save').click();
-  });
-
-  // chart metric toggle
-  document.getElementById('chart-toggle').addEventListener('click', function(e) {
-    var btn = e.target.closest('button'); if (!btn) return;
-    chartMetric = btn.dataset.metric;
-    this.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
-    btn.classList.add('active');
-    renderChart();
   });
 
   // ---- init ----
