@@ -786,6 +786,8 @@
     var tbody = document.getElementById('table-body');
     tbody.innerHTML = '';
     state.rounds.forEach(function(r, i) {
+      var _pre = num(r.pre), _size = num(r.size), _post = _pre + _size;
+      var _dil = _post > 0 ? (_size / _post * 100) : 0;
       var tr = document.createElement('tr');
       tr.setAttribute('data-i', i);
       tr.innerHTML =
@@ -793,7 +795,7 @@
         '<td class="num"><input class="cell-input num" type="number" min="0" step="1" value="' + round2(fx(num(r.pre))) + '" data-f="pre"></td>' +
         '<td class="num"><input class="cell-input num" type="number" min="0" step="0.5" value="' + round2(fx(num(r.size))) + '" data-f="size"></td>' +
         '<td class="num computed post"></td>' +
-        '<td class="num computed dil"></td>' +
+        '<td class="num"><input class="cell-input num" type="number" min="0" max="99.9" step="0.5" value="' + round2(_dil) + '" data-f="dil"></td>' +
         '<td class="num status"></td>' +
         '<td class="num stake"></td>' +
         '<td class="num"><button class="row-remove" title="Remove round">×</button></td>';
@@ -805,6 +807,12 @@
           if (f === 'name') {
             state.rounds[i].name = this.value;
             syncThroughOptions();
+          } else if (f === 'dil') {
+            // Back-solve pre-money from the target dilution, holding raised fixed:
+            // dilution = raised / (pre + raised)  ⇒  pre = raised × (1 − D) / D
+            var D = num(this.value) / 100;
+            var sz = num(state.rounds[i].size);
+            if (D > 0 && D < 1 && sz > 0) state.rounds[i].pre = sz * (1 - D) / D;
           } else {
             state.rounds[i][f] = toEur(num(this.value));
           }
@@ -842,7 +850,11 @@
       if (!tr) return;
       var prot = sim.steps[i].protected;
       tr.querySelector('.post').textContent = fmtM(r.post);
-      tr.querySelector('.dil').textContent = (r.dilution * 100).toFixed(1) + '%';
+      // Dilution + pre-money are two-way bound: refresh whichever the user isn't typing in.
+      var dilInput = tr.querySelector('input[data-f="dil"]');
+      if (dilInput && document.activeElement !== dilInput) dilInput.value = round2(r.dilution * 100);
+      var preInput = tr.querySelector('input[data-f="pre"]');
+      if (preInput && document.activeElement !== preInput) preInput.value = round2(fx(r.pre));
       var st = tr.querySelector('.status');
       st.textContent = prot ? 'Protected' : 'Diluted';
       st.className = 'num status ' + (prot ? 'protected-cell' : 'diluted-cell');
