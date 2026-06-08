@@ -453,6 +453,21 @@
   .src-round { margin-bottom: 10px; }
   .src-round strong { color: var(--tx); font-weight: 500; }
 
+  /* Step-by-step math walkthrough */
+  .math-intro { font-family: var(--sans); margin-bottom: 12px; color: var(--tx2); }
+  .math-block { margin-bottom: 4px; }
+  .math-step { padding: 8px 0; border-bottom: 1px dashed var(--brd); }
+  .math-step:last-child { border-bottom: none; }
+  .mr-head { font-family: var(--sans); font-weight: 600; font-size: 12px; color: var(--tx); margin-bottom: 3px; }
+  .mr-line { font-family: var(--mono); font-size: 12.5px; line-height: 1.65; color: var(--tx2); overflow-wrap: anywhere; }
+  .mr-line .res { color: var(--tx); font-weight: 500; }
+  .mr-prot, .mr-prot .res { color: var(--teal); }
+  .math-summary { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--brd); }
+  .math-eq { font-family: var(--mono); font-size: 12.5px; line-height: 1.9; color: var(--tx2); overflow-wrap: anywhere; }
+  .math-eq .ms-label { font-family: var(--sans); font-weight: 600; color: var(--tx); }
+  .math-eq .res { color: var(--tx); font-weight: 500; }
+  .math-note { font-family: var(--sans); font-size: 11px; color: var(--tx3); margin-top: 10px; line-height: 1.5; }
+
   .divider { height: 1px; background: var(--brd); margin: 2rem 0; }
   .footer { font-size: 12px; color: var(--tx3); margin-top: 2.5rem; line-height: 1.6; }
   .footer a { color: var(--blue); text-decoration: none; }
@@ -563,6 +578,11 @@
   <div class="comp-value" id="unprotected-stake">—</div>
   <div class="comp-detail" id="unprotected-detail">—</div>
 </div>
+
+<details id="math-details">
+  <summary>Show the math — step by step with your numbers</summary>
+  <div class="inner" id="math-inner"></div>
+</details>
 
 <div class="divider"></div>
 
@@ -875,7 +895,70 @@
         fmtM(gainVal) + ' at the ' + fmtM(exitEur) + ' exit.';
     }
 
+    renderMath();
     renderScenarios();
+  }
+
+  // Step-by-step walkthrough — derives every shown number from the current inputs.
+  function renderMath() {
+    var box = document.getElementById('math-inner');
+    if (!box) return;
+    var s = summarize(state), d = s.d, sim = s.sim;
+    var startPct = s.startPct, exitEur = num(state.exit);
+    function p2(x) { return x.toFixed(2) + '%'; }   // all percentages — two decimals so every line reconciles by hand
+
+    var html = '';
+    html += '<p class="math-intro">Each round multiplies the stake by its <em>retain factor</em> — the share existing holders keep (1 − dilution). ' +
+      'Protected rounds skip that step. Every line below uses your current inputs.</p>';
+
+    html += '<div class="math-block">';
+    html += '<div class="math-step"><div class="mr-head">Start — at incorporation</div>' +
+      '<div class="mr-line">university stake = <span class="res">' + p2(startPct) + '</span></div></div>';
+
+    var running = startPct;
+    d.rounds.forEach(function(r, i) {
+      var prot = sim.steps[i].protected;
+      var after = sim.steps[i].stakeAfter;
+      var dilPct = r.dilution * 100, retPct = r.retain * 100;
+      html += '<div class="math-step">';
+      html += '<div class="mr-head">Round ' + (i + 1) + ' — ' + escapeAttr(r.name) + '</div>';
+      html += '<div class="mr-line">post-money = pre + raised = ' + fmtM(r.pre) + ' + ' + fmtM(r.size) + ' = <span class="res">' + fmtM(r.post) + '</span></div>';
+      html += '<div class="mr-line">dilution = raised / post = ' + fmtM(r.size) + ' / ' + fmtM(r.post) + ' = <span class="res">' + p2(dilPct) + '</span></div>';
+      html += '<div class="mr-line">retain = 1 − ' + p2(dilPct) + ' = <span class="res">' + p2(retPct) + '</span></div>';
+      if (prot) {
+        html += '<div class="mr-line mr-prot">protected → stake unchanged = <span class="res">' + p2(after) + '</span></div>';
+      } else {
+        html += '<div class="mr-line">diluted → stake = ' + p2(running) + ' × ' + p2(retPct) + ' = <span class="res">' + p2(after) + '</span></div>';
+      }
+      running = after;
+      html += '</div>';
+    });
+    html += '</div>';
+
+    var Rpct = productRetain(d) * 100;
+    var allFactors = d.rounds.map(function(r) { return p2(r.retain * 100); });
+    var dilFactors = [], protFactors = [], protProd = 1;
+    d.rounds.forEach(function(r, i) {
+      if (sim.steps[i].protected) { protFactors.push(p2(r.retain * 100)); protProd *= r.retain; }
+      else dilFactors.push(p2(r.retain * 100));
+    });
+    var chain = p2(startPct) + (dilFactors.length ? ' × ' + dilFactors.join(' × ') : '');
+
+    html += '<div class="math-summary">';
+    html += '<div class="math-eq"><span class="ms-label">Final stake</span> = ' + chain + ' = <span class="res">' + p2(s.finalPct) + '</span></div>';
+    html += '<div class="math-eq"><span class="ms-label">Product of all retains (R)</span> = ' + (allFactors.length ? allFactors.join(' × ') : '100%') + ' = <span class="res">' + Rpct.toFixed(2) + '%</span></div>';
+    var protDivisor;
+    if (!protFactors.length) protDivisor = '1 (no rounds protected)';
+    else if (protFactors.length === 1) protDivisor = protFactors[0];
+    else protDivisor = '(' + protFactors.join(' × ') + ') = ' + p2(startPct) + ' ÷ ' + (protProd * 100).toFixed(2) + '%';
+    html += '<div class="math-eq"><span class="ms-label">Equivalent fully-dilutable stake</span> = start ÷ (retains of protected rounds) = ' +
+      p2(startPct) + ' ÷ ' + protDivisor + ' = <span class="res">' + p2(s.equivPct) + '</span></div>';
+    html += '<div class="math-eq"><span class="ms-label">Same stake without protection</span> = start × R = ' + p2(startPct) + ' × ' + Rpct.toFixed(2) + '% = <span class="res">' + p2(s.unprotPct) + '</span></div>';
+    html += '<div class="math-eq"><span class="ms-label">Value at exit</span> = final × exit = ' + p2(s.finalPct) + ' × ' + fmtM(exitEur) + ' = <span class="res">' + fmtM(s.finalPct / 100 * exitEur) + '</span></div>';
+    html += '<div class="math-note">All percentages shown to two decimals; results are computed at full precision, so any last-digit difference is display rounding only.</div>';
+    html += '</div>';
+
+    box.innerHTML = html;
   }
 
   // Cap input area (rebuilds on mode change / structure change / currency toggle)
